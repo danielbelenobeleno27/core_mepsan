@@ -14,7 +14,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.core.app.NeoService;
-import com.core.app.protocols.GilbarcoControllerE500;
 import com.core.app.protocols.MepsanController;
 import com.neo.app.bean.AConstant;
 import com.neo.app.bean.Autorizacion;
@@ -1553,7 +1552,7 @@ public class ServerComandoWS extends Thread {
                         for (Map.Entry<Integer, Cara> entry1 : surtidor.getCaras().entrySet()) {
                             Integer key1 = entry1.getKey();
                             Cara cara = entry1.getValue();
-                            if (cara.getEstado() != MepsanController.SURTIDORES_ESTADO_ESPERA) {
+                            if (cara.getEstado() != MepsanController.SURTIDOR_ESTADO) {
                                 estadoDiferenteEspera = true;
                                 break;
                             }

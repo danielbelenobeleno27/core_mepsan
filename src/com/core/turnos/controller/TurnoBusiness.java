@@ -41,7 +41,7 @@ class TurnoBusiness {
                 for (Map.Entry<Integer, Cara> entry1 : surtidor.getCaras().entrySet()) {
                     Integer key1 = entry1.getKey();
                     Cara cara = entry1.getValue();
-                    if (cara.getEstado() != MepsanController.SURTIDORES_ESTADO_ESPERA) {
+                    if (cara.getEstado() != MepsanController.SURTIDOR_ESTADO) {
                         surtidorEsperando = false;
                         estadoActual = cara.getEstado();
                     }
@@ -149,7 +149,7 @@ class TurnoBusiness {
                     if (!surtidor.getCaras().isEmpty()) {
                         for (Map.Entry<Integer, Cara> entry1 : surtidor.getCaras().entrySet()) {
                             Cara cara = entry1.getValue();
-                            if (cara.getEstado() != MepsanController.SURTIDORES_ESTADO_ESPERA) {
+                            if (cara.getEstado() != MepsanController.SURTIDOR_ESTADO) {
                                 surtidorEsperando = false;
                                 estadoActual = cara.getEstado();
                             }

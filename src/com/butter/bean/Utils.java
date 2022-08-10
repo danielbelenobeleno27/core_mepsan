@@ -122,33 +122,45 @@ public class Utils {
     }
 
     public static char[] stringToByteArray(String str, int length_bytes) {
-       String aux = "";
-       for (int i = 0; i < length_bytes; i++) {
-           aux += "0";
-       }
-       return (aux.substring(0, aux.length() - str.length()).concat(str)).toCharArray();
-   }
-   
-   public static String byteArrayToString(byte[] array) {
-       String aux = "";
-       for (byte b : array) {
-           aux += (String.format("%02x", b).toUpperCase());
-       }
-       return aux;
-   }
-   
-   public static byte[] byteListToByteArray(ArrayList<Byte> list){
-       byte[] array = new byte[list.size()];
-       for (int i = 0; i < array.length; i++) {
-           array[i] = list.get(i);
-       }
-       return array;
-   }
-    
+        String aux = "";
+        for (int i = 0; i < length_bytes; i++) {
+            aux += "0";
+        }
+        return (aux.substring(0, aux.length() - str.length()).concat(str)).toCharArray();
+    }
+
+    public static String byteArrayToString(byte[] array) {
+        String aux = "";
+        for (byte b : array) {
+            aux += (String.format("%02x", b).toUpperCase());
+        }
+        return aux;
+    }
+
+    public static String byteArrayToString(byte[] array, int init, int end) {
+        StringBuilder data = new StringBuilder();
+        int y = 0;
+        for (byte b : array) {
+            if (y >= init && y <= end) {
+                data.append(String.format("%02x", b).toUpperCase());
+            }
+            y++;
+        }
+        return data.toString();
+    }
+
+    public static byte[] byteListToByteArray(ArrayList<Byte> list) {
+        byte[] array = new byte[list.size()];
+        for (int i = 0; i < array.length; i++) {
+            array[i] = list.get(i);
+        }
+        return array;
+    }
+
     public static String getFormat(byte b) {
         return (String.format("%02x", b).toUpperCase() + " ");
     }
-    
+
     public static boolean isWindows() {
         return (OS.contains("win"));
     }

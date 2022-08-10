@@ -113,5 +113,14 @@ public class Mepsan implements Base {
         }
         return dtrama;
     }
+    
+    
+    public static boolean ACKPeticion(byte[] tx, byte[] rx) {
+        boolean valido = false;
+        if (tx[0] == rx[0] && (tx[1] & (byte) 0x0F) == (rx[1] & (byte) 0x0F) && rx[2] == (byte) 0xFA) {
+            valido = true;
+        }
+        return valido;
+    }
 
 }

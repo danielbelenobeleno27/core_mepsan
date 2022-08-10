@@ -402,6 +402,14 @@ public class NeoService {
             Logger.getLogger(NeoService.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    
+    public static void pauseMS(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(NeoService.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
     private void cargarIcono() {
 

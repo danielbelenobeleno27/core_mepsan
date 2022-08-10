@@ -1,6 +1,7 @@
 package com.core.commons.cliente;
 
 import com.core.app.NeoService;
+import com.core.app.protocols.Mepsan;
 import com.fazecast.jSerialComm.SerialPort;
 import com.neo.app.bean.ProtocolsDto;
 import java.io.IOException;
@@ -10,7 +11,6 @@ import java.util.logging.Logger;
 
 public class ClientSerial extends Cliente {
 
-    byte[] response;
     SerialPort Port;
     String setComPort;
     int baudRate;
@@ -20,6 +20,8 @@ public class ClientSerial extends Cliente {
     byte[] inbuffer;
     boolean conect = false;
     boolean debug = false;
+    static final String TIPO_TX = "TX";
+    static final String TIPO_RX = "RX";
 
     public ClientSerial(String setComPort, int baudRate, int numDataBit, int numStopBit, int parity, boolean debug) {
         this.setComPort = setComPort;
@@ -62,10 +64,9 @@ public class ClientSerial extends Cliente {
         long id = new Date().getTime();
         sendTrama(id, protocol);
         if (time > 0) {
-            Cliente.wait(time);
+            NeoService.pauseMS(time);
         }
-        receiveTrama(id, protocol);
-        return response;
+        return receiveTrama(id, protocol);
     }
 
     @Override
@@ -92,48 +93,46 @@ public class ClientSerial extends Cliente {
             Port.getOutputStream().flush();
 
             if (protocol.isDebug()) {
-                String trama = "";
-                for (byte b : protocol.getTxTrama()) {
-                    trama = trama.concat(String.format("%02x", b).toUpperCase() + " ");
-                }
-                if (protocol.getTitulo().equals("pulling")) {
-                    NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_CYAN + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [TX  SERIAL]: " + trama + NeoService.ANSI_RESET);
-                } else {
-                    NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_GREEN + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [TX  SERIAL]: " + trama + NeoService.ANSI_RESET);
-                }
+                procesarTramaRespuesta(id, protocol, TIPO_TX, protocol.getTxTrama(), false);
             }
         } catch (IOException e) {
-            Logger.getLogger(ClientSerial.class
-                    .getName()).log(Level.SEVERE, null, e);
+            Logger.getLogger(ClientSerial.class.getName()).log(Level.SEVERE, null, e);
         }
     }
 
     public byte[] receiveTrama(long id, ProtocolsDto protocol) {
-        response = new byte[0];
+        byte[] response = new byte[0];
         try {
             if (protocol.isEsperaRespuesta()) {
                 response = protocol.getRxTrama();
                 int cantbyte = Port.readBytes(response, response.length);
-                if (cantbyte != 0) {
-                    if (protocol.isDebug()) {
-                        String trama = "";
-                        for (byte b : response) {
-                            trama = trama.concat(String.format("%02x", b).toUpperCase() + " ");
-                        }
-                        if (protocol.getTitulo().equals("pulling")) {
-                            NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_CYAN + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [RX  SERIAL]: " + trama + NeoService.ANSI_RESET);
-                        } else {
-                            NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_GREEN + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [RX  SERIAL]: " + trama + NeoService.ANSI_RESET);
-                        }
-                    }
+                //RESPUESTA CABECERA 0x50
+                if (cantbyte > 0 && response[0] != protocol.getTxTrama()[0] && response[cantbyte - 1] != 0xFA) {
+                    cantbyte = 0;
+                    NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_RED + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [RX  SERIAL]: RESPUESTA NO VALIDA DEL SURTIDOR " + NeoService.ANSI_RESET);
+                    procesarTramaRespuesta(id, protocol, TIPO_RX, response, true);
+                }
+                if (cantbyte != 0 && protocol.isDebug()) {
+                    procesarTramaRespuesta(id, protocol, TIPO_RX, response, false);
                 } else {
                     NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_RED + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [RX  SERIAL]: NO HAY RESPUESTA DEL SURTIDOR" + NeoService.ANSI_RESET);
                 }
             }
         } catch (Exception e) {
-            Logger.getLogger(ClientSerial.class
-                    .getName()).log(Level.SEVERE, null, e);
+            Logger.getLogger(ClientSerial.class.getName()).log(Level.SEVERE, null, e);
         }
         return response;
+    }
+
+    void procesarTramaRespuesta(long id, ProtocolsDto protocol, String tipo, byte[] tramaX, boolean isError) {
+        String trama = "";
+        for (byte b : tramaX) {
+            trama = trama.concat(String.format("%02x", b).toUpperCase() + " ");
+        }
+        if (protocol.getTitulo().equals("pulling")) {
+            NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_CYAN + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [" + tipo + "  SERIAL]: " + trama + NeoService.ANSI_RESET);
+        } else {
+            NeoService.setLog(protocol.getTitulo() + " " + (isError ? NeoService.ANSI_RED : NeoService.ANSI_GREEN) + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [[" + tipo + "  SERIAL]: " + trama + NeoService.ANSI_RESET);
+        }
     }
 }

@@ -163,7 +163,11 @@ public class MepsanController extends BaseControllerProtocols{
 
     public void consultarEstado(Surtidor surtidor, Cara cara) throws Exception {
         
+        int estado = -1;
+        
         ArrayList<Byte> respuesta = protocolo.estadoManguera(surtidor, cara.getNumero(), TIEMPO_ESPERA);
+        
+        estado = respuesta.get(3) % CONSTANTE_FIND_REPUESTA;
         
         byte[] array = Utils.byteListToByteArray(respuesta);
         

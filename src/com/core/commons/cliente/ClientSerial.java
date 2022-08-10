@@ -48,7 +48,6 @@ public class ClientSerial extends Cliente {
                 }
             }
         }
-        System.out.println("com.core.commons.cliente.ClientSerial.<init>()");
     }
 
     /**
@@ -63,7 +62,7 @@ public class ClientSerial extends Cliente {
         long id = new Date().getTime();
         sendTrama(id, protocol);
         if (time > 0) {
-            wait(time);
+            Cliente.wait(time);
         }
         receiveTrama(id, protocol);
         return response;
@@ -95,7 +94,7 @@ public class ClientSerial extends Cliente {
             if (protocol.isDebug()) {
                 String trama = "";
                 for (byte b : protocol.getTxTrama()) {
-                    trama += (String.format("%02x", b).toUpperCase() + " ");
+                    trama = trama.concat(String.format("%02x", b).toUpperCase() + " ");
                 }
                 if (protocol.getTitulo().equals("pulling")) {
                     NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_CYAN + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [TX  SERIAL]: " + trama + NeoService.ANSI_RESET);
@@ -115,12 +114,11 @@ public class ClientSerial extends Cliente {
             if (protocol.isEsperaRespuesta()) {
                 response = protocol.getRxTrama();
                 int cantbyte = Port.readBytes(response, response.length);
-
                 if (cantbyte != 0) {
                     if (protocol.isDebug()) {
                         String trama = "";
                         for (byte b : response) {
-                            trama += (String.format("%02x", b).toUpperCase() + " ");
+                            trama = trama.concat(String.format("%02x", b).toUpperCase() + " ");
                         }
                         if (protocol.getTitulo().equals("pulling")) {
                             NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_CYAN + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [RX  SERIAL]: " + trama + NeoService.ANSI_RESET);

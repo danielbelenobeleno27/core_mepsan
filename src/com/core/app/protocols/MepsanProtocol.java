@@ -26,7 +26,6 @@ public class MepsanProtocol extends BaseProtocols {
     
     private static final  int CONSTANTE_FIND_VALOR = 0x0F;
     private static final int CONSTANTE_FIND_COMANDO = 0xF0;
-    private static final int CONSTANTE_COMANDO_PPARCIAL = 0X00;
     
     private static final int FACTOR_PREDETERMINACION_VOLUMEN = 1000;
     private static final int FACTOR_PREDETERMINACION_DINERO = 1;
@@ -51,6 +50,7 @@ public class MepsanProtocol extends BaseProtocols {
             case ESTADO_MANGUERA:
                 rxTrama = new byte[15];
                 break;
+            default:
         }
 
         txTrama[0] = 0x50;
@@ -207,6 +207,7 @@ public class MepsanProtocol extends BaseProtocols {
             NeoService.setLog(NeoService.ANSI_GREEN + "Respuesta del surtidor valida, enviando comando pulling" + NeoService.ANSI_RESET);
             receive = pulling(surtidor, cara, CONSULTA_TOTALIZADORES, wait);
         }
+        
         return null;
     }
 
@@ -338,7 +339,7 @@ public class MepsanProtocol extends BaseProtocols {
        
        switch (parent) {
            case CONSULTA_TOTALIZADORES:
-               validarTotalizadores(protodto, response, wait);
+               validarTotalizadores(protodto, response, 5, wait);
                break;
            case ESTADO_MANGUERA:
                break;
@@ -346,12 +347,17 @@ public class MepsanProtocol extends BaseProtocols {
        }
    }
 
-   private byte[] validarTotalizadores(ProtocolsDto protocolDto, byte[] response, int wait) {
+   private byte[] validarTotalizadores(ProtocolsDto protocolDto, byte[] response, int reintentos, int wait) {
+       int intentos = 0;
        try {
-           while (response[2] != CONSTANTE_FIND_TOTALIZADORES) {
+           while (intentos < reintentos) {
                NeoService.millisecondsPause(TIEMPO_ESPERA_VALIDACION);
                NeoService.setLog(NeoService.ANSI_YELLOW + "RESPUESTA INCORRECTA DE TOTALIZADORES, SE VUELVE A CONSULTAR" + NeoService.ANSI_RESET);
-               response = client.send(protocolDto, wait + 100);
+               response = client.send(protocolDto, wait);
+               if (response[2] == CONSTANTE_FIND_TOTALIZADORES) {
+                   break;
+               }
+               intentos++;
            }
        } catch (Exception e) {
            NeoService.setLog(e.getMessage());

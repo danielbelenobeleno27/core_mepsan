@@ -608,15 +608,21 @@ public class MepsanController extends BaseControllerProtocols {
                 if (iniciales != null) {
                     Autorizacion autorizacion = sutidao.getAutorizacion(cara.getNumero(), grado);
                     boolean autorizado = true;
-                    if (autorizacion != null) {
-                        NeoService.AUTORIZACION_REQUIERE_VEHICULO = sdao.getCaraRequierePlaca(cara.getMagueraactual().getId());
-                        if (NeoService.AUTORIZACION_REQUIERE_VEHICULO && autorizacion.getPlacaVehiculo() == null) {
-                            autorizado = false;
-                            NeoService.setLog(NeoService.ANSI_RED+"MANGUERA " + cara.getMagueraactual().getId() + " REQUIERE PLACA"+NeoService.ANSI_RESET);
+
+                    NeoService.AUTORIZACION_REQUIERE_VEHICULO = sdao.getCaraRequierePlaca(cara.getMagueraactual().getId());
+                    if (NeoService.AUTORIZACION_REQUIERE_VEHICULO) {
+                        autorizado = false;
+                        if (autorizacion != null && autorizacion.getPlacaVehiculo() != null) {
+                            autorizado = true;
+                        } else {
+                            NeoService.setLog(NeoService.ANSI_RED + "MANGUERA " + cara.getMagueraactual().getId() + " REQUIERE PLACA" + NeoService.ANSI_RESET);
                         }
+                    }
+                    if (autorizacion != null) {
                         sdao.actualizaAutorizacion(autorizacion.getId());
                         procesarAutorizacionPredeterminacion(surtidor, cara, mangueraSurtidor, autorizacion);
                     }
+
                     if (autorizado) {
                         try {
                             protocolo.autorizar(surtidor, cara.getNumero(), TIEMPO_ENTRE_COMANDO);

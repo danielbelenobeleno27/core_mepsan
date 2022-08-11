@@ -94,8 +94,6 @@ public class ServerComandoWS extends Thread {
         server.createContext("/api/aperturaTurno", new HttpHandlerAperturaTurno());
         server.createContext("/api/cierreTurno", new HttpHandlerCierreTurno());
 
-        //server.createContext("/api/terminate", new HttpHandlerTerminate());
-        //server.createContext("/api/initiate", new HttpHandlerInitiate());
         server.createContext("/api", new HttpHandlerApi());
         server.setExecutor(null);
         server.start();
@@ -207,7 +205,7 @@ public class ServerComandoWS extends Thread {
                                             JsonArray jsonarray = new JsonArray();
                                             boolean salto = false;
                                             SurtidorDao dao = new SurtidorDao();
-                                            
+
                                             TIENE_PETICION.set(true);
                                             while (ESTA_PROCESANDO.get()) {
                                             }
@@ -218,7 +216,7 @@ public class ServerComandoWS extends Thread {
                                                 NeoService.setLog(NeoService.ANSI_GREEN + "CONSULTANDO CARA = " + cara.getNumero() + NeoService.ANSI_RESET);
 
                                                 Totalizador[] totales = NeoService.surtidores.get(svalue.getId()).control.getTotalizadoresByCara(cara);
-                                                
+
                                                 for (Map.Entry<Integer, Manguera> entry : cara.getMangueras().entrySet()) {
                                                     Manguera value = entry.getValue();
                                                     Totalizador totalSistema = sdao.getTotalizadores(xsurtidor.getUniqueId(), value.getId());
@@ -330,7 +328,7 @@ public class ServerComandoWS extends Thread {
                                                 }
 
                                                 NeoService.PERSONA_AUTORIZA_ID.set(0);
-                                                
+
                                                 NeoService.setLog(NeoService.ANSI_PURPLE + jsona.toString() + NeoService.ANSI_RESET);
                                                 Headers respHeaders = t.getResponseHeaders();
                                                 respHeaders.add("content-type", "application/json");
@@ -350,9 +348,7 @@ public class ServerComandoWS extends Thread {
                                             jerror.addProperty("fechaProceso", sdf.format(new Date()));
                                             Utils.responseError(t, ErrorResponse.SC_NOT_ACCEPTABLE, jerror);
                                         }
-
                                     }
-
                                 }
                             } else {
                                 JsonObject jerror = new JsonObject();
@@ -456,7 +452,7 @@ public class ServerComandoWS extends Thread {
                 }
             }
             return json;
-            
+
         }
 
         static boolean VerificarEstadoSurtidor(int surtidor) {
@@ -513,7 +509,7 @@ public class ServerComandoWS extends Thread {
                     Manguera manguera = entry.getValue();
                     NeoService.setLog(NeoService.ANSI_YELLOW + "CONSULTANDO MANGUERA = " + manguera.getId() + NeoService.ANSI_RESET);
                     Totalizador[] totalizador = sdao.getTotalizadoresCompletoVentas(grupoJornada, manguera.getId());
-                    
+
                     NeoService.setLog(NeoService.ANSI_YELLOW + "TOTALIZADORES = " + totalizador.length + NeoService.ANSI_RESET);
                     //[0] es inicial
                     //[1] es final
@@ -1760,21 +1756,7 @@ public class ServerComandoWS extends Thread {
 
                         SurtidorDao sdao = new SurtidorDao();
                         EquipoDao dao = new EquipoDao();
-                        int CANTIDAD_DIGITOS;
-                        try {
-                            CANTIDAD_DIGITOS = dao.getParametroInt("cantidad_digitos_s" + surtidorId);
-                            if (CANTIDAD_DIGITOS == 0) {
-                                NeoService.setLog("SE APLICA LA CANTIDAD DE DIGITOS DEFAULT 4 [cantidad_digitos_s]");
-                                CANTIDAD_DIGITOS = 4;
-                            } else {
 
-                            }
-                        } catch (Exception a) {
-                            NeoService.setLog("SE APLICA LA CANTIDAD DE DIGITOS EXCEPTION 4 [cantidad_digitos_s]");
-                            CANTIDAD_DIGITOS = 4;
-                        }
-
-                        NeoService.setLog("CANTIDAD DE DIGITOS " + CANTIDAD_DIGITOS);
                         boolean estadoDiferenteEspera = false;
                         if (NeoService.surtidores.containsKey(surtidorId)) {
 
@@ -1872,7 +1854,7 @@ public class ServerComandoWS extends Thread {
                                                 long precio = Utils.calculeCantidadInversa(precioOriginal, factorPrecio);
 
                                                 NeoService.setLog("CAMBIANDO DE PRECIO A [" + precioOriginal + "] CON FACTOR ES [" + precio + "] " + factorPrecio);
-                                                NeoService.surtidores.get(surtidorId).control.actualizaMultipreciosPrecios(precio, listaPrecio, grado, scara, false, precioOriginal, CANTIDAD_DIGITOS);
+                                                NeoService.surtidores.get(surtidorId).control.actualizaMultipreciosPrecios(precio, listaPrecio, grado, scara, false, precioOriginal);
                                                 NeoService.setLog("CAMBIO DE PRECIOS APLICADO");
                                             } catch (DAOException a) {
                                                 error = new ErrorResponse();

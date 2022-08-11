@@ -107,15 +107,18 @@ public class ClientSerial extends Cliente {
                 response = protocol.getRxTrama();
                 int cantbyte = Port.readBytes(response, response.length);
                 //RESPUESTA CABECERA 0x50
-                if (cantbyte > 0 && response[0] != protocol.getTxTrama()[0] && response[cantbyte - 1] != 0xFA) {
+                if ( cantbyte > 0 && response[0] != protocol.getTxTrama()[0] && response[cantbyte - 1] != 0xFA ) {
                     cantbyte = 0;
                     NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_RED + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [RX  SERIAL]: RESPUESTA NO VALIDA DEL SURTIDOR " + NeoService.ANSI_RESET);
                     procesarTramaRespuesta(id, protocol, TIPO_RX, response, true);
+                    reconect();
                 }
-                if (cantbyte != 0 && protocol.isDebug()) {
-                    procesarTramaRespuesta(id, protocol, TIPO_RX, response, false);
-                } else {
-                    NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_RED + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [RX  SERIAL]: NO HAY RESPUESTA DEL SURTIDOR" + NeoService.ANSI_RESET);
+                if (protocol.isDebug()) {
+                    if (cantbyte != 0) {
+                        procesarTramaRespuesta(id, protocol, TIPO_RX, response, false);
+                    } else {
+                        NeoService.setLog(protocol.getTitulo() + " " + NeoService.ANSI_RED + "[" + id + "] " + protocol.getOrigen().getIp() + ":" + protocol.getOrigen().getPort() + " V." + NeoService.VERSION_NAME + " [RX  SERIAL]: NO HAY RESPUESTA DEL SURTIDOR" + NeoService.ANSI_RESET);
+                    }
                 }
             }
         } catch (Exception e) {

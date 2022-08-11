@@ -2892,6 +2892,22 @@ public class SurtidorDao {
         }
     }
 
+    public int getParametroInt(String codigo) {
+        int valor = 0;
+        try {
+            String sql = "SELECT valor FROM PARAMETROS WHERE codigo=?";
+            PreparedStatement ps = NeoService.obtenerConexion().prepareStatement(sql);
+            ps.setString(1, codigo);
+            ResultSet re = ps.executeQuery();
+            while (re.next()) {
+                valor = re.getInt("valor");
+            }
+        } catch (SQLException s) {
+            NeoService.setLog("[ERROR (getParametroInt) Exception]: " + s.getMessage());
+        }
+        return valor;
+    }
+
     public void borrarPredeterminada(int cara) {
         try {
 

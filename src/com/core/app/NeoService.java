@@ -43,7 +43,7 @@ public class NeoService {
 
     public static final String APLICATION_FULL_NAME = "Lazo Express Core";
     public static final String APLICATION_NAME = "lazo_express_core";
-    public static final int VERSION_CODE = 1;
+    public static final int VERSION_CODE = 7;
     public static boolean SURTIDOR_ERROR = false;
     public static final String VERSION_NAME = "Beta 3 C" + VERSION_CODE;
 

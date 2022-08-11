@@ -56,6 +56,9 @@ public class MepsanProtocol extends BaseProtocols {
             case ESTADO_MANGUERA:
                 rxTrama = new byte[15];
                 break;
+            case VENTA_EN_CURSO:
+                rxTrama = new byte[22];
+                break;
             default:
         }
 
@@ -66,7 +69,7 @@ public class MepsanProtocol extends BaseProtocols {
 
         ProtocolsDto protodto = new ProtocolsDto(surtidor, "pulling", txTrama, rxTrama, surtidor.isEcho());
         protodto.setEsperaRespuesta(true);
-        protodto.setDebug(true);
+        protodto.setDebug(surtidor.isDebugTrama());
         byte[] response = client.send(protodto, TIEMPO_ESPERA_PULLING);
 
         ACKPulling(surtidor, cara, parent, protodto, response, wait);
@@ -90,15 +93,19 @@ public class MepsanProtocol extends BaseProtocols {
 
         ProtocolsDto protodto = new ProtocolsDto(surtidor, ESTADO_MANGUERA, txTrama, rxTrama, surtidor.isEcho());
         protodto.setEsperaRespuesta(true);
-        protodto.setDebug(true);
+        protodto.setDebug(surtidor.isDebugTrama());
         byte[] response = client.send(protodto, wait);
         if (response != null && response.length > 0) {
             boolean valido = ACKPeticion(txTrama, rxTrama);
             if (valido) {
-                NeoService.setLog(NeoService.ANSI_GREEN + "Respuesta del surtidor valida, enviando comando pulling" + NeoService.ANSI_RESET);
+                if (surtidor.isDebugEstado()) {
+                    NeoService.setLog(NeoService.ANSI_GREEN + "Respuesta del surtidor valida, enviando comando pulling" + NeoService.ANSI_RESET);
+                }
                 response = pulling(surtidor, cara, ESTADO_MANGUERA, wait);
             } else {
-                NeoService.setLog(NeoService.ANSI_RED + "Respuesta del surtidor ERRORNEA, NO SE ENVIA COMANDO PULLING" + NeoService.ANSI_RESET);
+                if (surtidor.isDebugEstado()) {
+                    NeoService.setLog(NeoService.ANSI_RED + "Respuesta del surtidor ERRORNEA, NO SE ENVIA COMANDO PULLING" + NeoService.ANSI_RESET);
+                }
                 response = new byte[1];
                 response[0] = CONSTANTE_RESPUESTA_ERROR_TRAMA;
             }
@@ -146,7 +153,9 @@ public class MepsanProtocol extends BaseProtocols {
             String data = byteArrayToString(response, 7, 9);
             int mangueraSurtidor = response[10] & CONSTANTE_FIND_MANGUERA;
             if (mangueraSurtidor == grado) {
-                return Long.parseLong(data, 16);
+                NeoService.setLog(NeoService.ANSI_GREEN + " PRECIO SIN CONVERTIR " + data + NeoService.ANSI_RESET);
+                NeoService.setLog(NeoService.ANSI_GREEN + " PRECIO DE LA MANGUERA " + mangueraSurtidor + " $" + Long.parseLong(data) + NeoService.ANSI_RESET);
+                return Long.parseLong(data);
             }
         }
         return 0L;
@@ -170,7 +179,7 @@ public class MepsanProtocol extends BaseProtocols {
         protodto.setDebug(true);
         protodto.setEsperaRespuesta(surtidor.isEcho());
 
-        client.send(protodto, wait);
+        rxTrama = client.send(protodto, wait);
 
         boolean valido = ACKPeticion(txTrama, rxTrama);
         if (valido) {
@@ -222,10 +231,40 @@ public class MepsanProtocol extends BaseProtocols {
         ProtocolsDto protodto = new ProtocolsDto(surtidor, VENTA_EN_CURSO, txTrama, rxTrama, surtidor.isEcho());
         protodto.setDebug(surtidor.isDebugTrama());
         protodto.setEsperaRespuesta(true);
+        VentaParcial venta = new VentaParcial();
+        String dataVolumen = "0";
+        String dataImporte = "0";
+        String dataPrecio = "0";
+        byte[] response = client.send(protodto, wait);
+        if (response != null && response.length > 0) {
+            response = pulling(surtidor, cara.getNumero(), VENTA_EN_CURSO, wait);
+        }
+        
+        if (response == null || response.length == 0) {
+            response = pulling(surtidor, cara.getNumero(), VENTA_EN_CURSO, wait);
+        }
 
-        byte[] receive = client.send(protodto, wait);
+        if (response != null && response.length > 2) {
+            dataVolumen += byteArrayToString(response, 4, 7);
+            dataImporte += byteArrayToString(response, 8, 11);
+            dataPrecio += byteArrayToString(response, 14, 16);
 
-        return null;
+            NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + Utils.fill("=", Utils.PAGE_SIZE));
+            NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + Utils.text_between("CARA:", cara.getNumero() + ""));
+            NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + Utils.text_between("MANGUERA:", cara.getMagueraactual().getId() + ""));
+            NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + Utils.text_between("GRADO:", cara.getMagueraactual().getGrado() + ""));
+            NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + Utils.text_between("PRECIO:", dataPrecio + ""));
+            NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + Utils.text_between("IMPORTE:", dataImporte + ""));
+            NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + Utils.text_between("VOLUMEN CALCULADO:", dataVolumen + ""));
+            NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + Utils.fill("=", Utils.PAGE_SIZE));
+        }
+
+        venta.setVolumenCalculado(Long.parseLong(dataVolumen));
+        venta.setPrecio(Long.parseLong(dataPrecio));
+        venta.setVolumenReal(Long.parseLong(dataImporte));
+        venta.setVolumen(Long.parseLong(dataVolumen));
+
+        return venta;
     }
 
     public Totalizador consigueTotalizadores(Surtidor surtidor, int cara, int manguera, int wait, int tipoTotalizador) throws Exception {
@@ -239,7 +278,12 @@ public class MepsanProtocol extends BaseProtocols {
         txTrama[1] = (byte) (txTrama[1] | idTransaccion);
         txTrama[2] = 0x65;
         txTrama[3] = 0x01;// LENGTH DE DATOS
-        txTrama[4] = (byte) (tipoTotalizador);
+
+        if (tipoTotalizador == 0) {
+            txTrama[4] = 0;
+        } else {
+            txTrama[4] = 0x10;
+        }
         txTrama[4] = (byte) (txTrama[4] | manguera); //TOTALIZADORES POR VOLUMEN el 0 antes de 01
         txTrama = MEPSAN.calcularCheckSum(txTrama);
 
@@ -262,11 +306,11 @@ public class MepsanProtocol extends BaseProtocols {
                 String data = byteArrayToString(receive, 5, 9);
                 if (tipoTotalizador == MepsanController.PREGUNTA_TOTALIZADOR_VOLUMEN) {
                     NeoService.setLog(NeoService.ANSI_PURPLE + "TOTALIZADORES VOLUMEN " + data + NeoService.ANSI_RESET);
-                    totalizadores.setAcumuladoVolumen(Long.parseLong(data, 16));
+                    totalizadores.setAcumuladoVolumen(Long.parseLong(data));
                 }
                 if (tipoTotalizador == MepsanController.PREGUNTA_TOTALIZADOR_IMPORTE) {
                     NeoService.setLog(NeoService.ANSI_PURPLE + "TOTALIZADORES IMPORTE " + data + NeoService.ANSI_RESET);
-                    totalizadores.setAcumuladoVenta(Long.parseLong(data, 16));
+                    totalizadores.setAcumuladoVenta(Long.parseLong(data));
                 }
                 return totalizadores;
             } else {
@@ -353,7 +397,7 @@ public class MepsanProtocol extends BaseProtocols {
 
     public int setPrecio(Surtidor surtidor, int cara, long precio, int wait) throws Exception {
         byte[] txTrama = new byte[14];
-        byte[] rxTrama = new byte[2];
+        byte[] rxTrama = new byte[3];
 
         byte idTransaccion = getIdTransaccion();
         txTrama[0] = 0x50;

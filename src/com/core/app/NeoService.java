@@ -188,6 +188,8 @@ public class NeoService {
     public static final String ANSI_PURPLE = "\u001B[35m";
     public static final String ANSI_CYAN = "\u001B[36m";
     public static final String ANSI_WHITE = "\u001B[37m";
+    public final static int CLIENTES_VARIOS_ID = 2;
+    public static boolean AUTORIZACION_REQUIERE_VEHICULO = false;
 
     public static void main(String[] args) {
 
@@ -402,7 +404,7 @@ public class NeoService {
             Logger.getLogger(NeoService.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+
     public static void pauseMS(int i) {
         try {
             Thread.sleep(i);

@@ -3,6 +3,8 @@ package com.core.app.protocols;
 import com.butter.bean.CatalogoBean;
 import com.butter.bean.EquipoDao;
 import com.butter.bean.Main;
+import com.butter.bean.PredeterminadaBean;
+import com.butter.bean.TareaProgramada;
 import com.butter.bean.Utils;
 import com.core.app.NeoService;
 import static com.core.app.NeoService.sutidao;
@@ -30,6 +32,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Level;
@@ -257,7 +260,7 @@ public class MepsanController extends BaseControllerProtocols {
 
         grupoJornada = sutidao.getGrupoJornada();
         if (grupoJornada == 0) {
-            //TODO: ejecucionTareasProgramadas(cara.getNumero());
+            ejecucionTareasProgramadas(cara.getNumero());
         }
 
         boolean iniciando = false;
@@ -298,6 +301,29 @@ public class MepsanController extends BaseControllerProtocols {
         }
     }
 
+    private void ejecucionTareasProgramadas(int cara) {
+        try {
+            LinkedHashSet<TareaProgramada> tareas = sdao.getTareasProgramadas();
+            if (!tareas.isEmpty()) {
+                NeoService.setLog(NeoService.ANSI_CYAN + "**** MEPSAN: " + NeoService.ANSI_RESET + "BUSCO FACTOR DE PRECIO");
+                int factorPrecio = sdao.getFactorPrecio(surtidor.getId());
+                for (TareaProgramada tarea : tareas) {
+                    if (tarea.getCara() == cara) {
+                        long precio = Utils.calculeCantidadInversa(tarea.getPrecioOriginal(), factorPrecio);
+                        NeoService.setLog(NeoService.ANSI_CYAN + "****** MEPSAN: " + NeoService.ANSI_RESET + "APLICANDO CAMBIO DE PRECIO A CARA=" + tarea.getCara() + " MANGUERA= " + tarea.getManguera() + " GRADO= " + tarea.getGrado() + " VALOR ORIGINAL =" + tarea.getPrecioOriginal() + " FACTOR PRECIO = " + factorPrecio + " VALOR FACTOR = " + precio);
+                        ESTA_PROCESANDO.set(false);
+                        actualizaMultipreciosPrecios(precio, 1, tarea.getGrado(), tarea.getCara(), false, tarea.getPrecioOriginal());
+                        sdao.setTareaProgramada(tarea.getId());
+                        TIENE_PETICION.set(false);
+                        NeoService.setLog(NeoService.ANSI_CYAN + "**--** MEPSAN: " + NeoService.ANSI_RESET + "CAMBIO APLICADO");
+                    }
+                }
+            }
+        } catch (DAOException ex) {
+            Logger.getLogger(MepsanController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
     void validarFinVenta(Surtidor surtidor, Cara cara, int estado) {
         if (estado == ESTADO_MANGUERA_COLGADO && sutidao.getVentaCurso(surtidor, cara)) {
             try {
@@ -313,7 +339,7 @@ public class MepsanController extends BaseControllerProtocols {
         }
     }
 
-    void procesarEstadoDescolgado(Surtidor surtidor, Cara cara, int estado, int mangueraSurtidor) {
+    void procesarEstadoDescolgado(Surtidor surtidor, Cara cara, int estado, int mangueraSurtidor) throws Exception {
         NeoService.setLog("ESTADO MANGUERA #".concat(cara.getMagueraactual().getId() + "").concat(" DESCOLGADO"));
         if (!sutidao.getVentaCurso(surtidor, cara)) {
             boolean existeSaltoLectura = false;
@@ -430,7 +456,49 @@ public class MepsanController extends BaseControllerProtocols {
         return vpartial;
     }
 
-    void procesarEstadoDespachoSurtidor(Surtidor surtidor, Cara cara) throws Exception {
+    void procesarAutorizacionPredeterminacion(Surtidor surtidor, Cara cara, int mangueraSurtidor, Autorizacion autorizacion) throws Exception {
+        PredeterminadaBean predeterminada = sdao.getPredeterminada(cara.getNumero());
+        if (predeterminada == null) {
+            NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + "CANTIDAD MAXIMA VOLUMEN " + autorizacion.getMontoMaximo());
+            if (autorizacion.getCantidadMaxima() > 0) {
+                NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + "ENTRO EN VOLUMEN CON UNA TRANSACCION PREVIA");
+                int factorPredeterminacion;
+                try {
+                    factorPredeterminacion = sdao.getFactorPredeterminacion(surtidor.getId());
+                } catch (DAOException ex) {
+                    factorPredeterminacion = 1;
+                }
+                long precioPredeteminar = (long) (autorizacion.getCantidadMaxima() * factorPredeterminacion);
+                protocolo.setPredeterminarVolumen(surtidor, cara.getNumero(), precioPredeteminar, TIEMPO_ENTRE_COMANDO);
+            }
+
+            NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + "CANTIDAD MAXIMA EN MONTO " + autorizacion.getMontoMaximo());
+            if (autorizacion.getMontoMaximo() > 0) {
+                NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + "ENTRO EN MONTO");
+                protocolo.setPredeterminarDinero(surtidor, cara.getNumero(), (int) autorizacion.getMontoMaximo(), TIEMPO_ENTRE_COMANDO);
+            }
+        } else {
+            if (!predeterminada.isPrecio()) {
+                NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + "ENTRO EN UNA PREDETERMINACION EN VOLUMEN");
+
+                int factorPredeterminacion;
+                try {
+                    factorPredeterminacion = sdao.getFactorPredeterminacion(surtidor.getId());
+                } catch (DAOException ex) {
+                    factorPredeterminacion = 1;
+                }
+
+                long precioPredeteminar = (int) predeterminada.getValor() * factorPredeterminacion;
+                protocolo.setPredeterminarVolumen(surtidor, cara.getNumero(), precioPredeteminar, TIEMPO_ENTRE_COMANDO);
+
+            } else {
+                NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + "SE ESTÁ TRATANDO DE PREDETERMINAR EN PRECIO... " + predeterminada.getValor());
+                protocolo.setPredeterminarDinero(surtidor, cara.getNumero(), (int) predeterminada.getValor(), TIEMPO_ENTRE_COMANDO);
+            }
+        }
+    }
+
+    void procesarEstadoDespachoSurtidor(Surtidor surtidor, Cara cara, int mangueraSurtidor) throws Exception {
         VentaParcial vpartial = obtenerVentaDisplay(surtidor, cara);
         Venta ventaDespacho1;
         if (cara.getMagueraactual().getVenta() != null) {
@@ -462,6 +530,7 @@ public class MepsanController extends BaseControllerProtocols {
         cara.setPublicEstadoId(NeoService.SURTIDORES_PUBLIC_ESTADO_ID_DESPACHO);
         cara.setPublicEstadoDescripcion(NeoService.SURTIDORES_PUBLIC_ESTADO_DS_DESPACHO);
         cara.setEstado(SURTIDOR_ESTADO_DESPACHO);
+        sutidao.guardarEstado(surtidor, cara, validarGrado(cara, mangueraSurtidor));
     }
 
     void procesarFinVenta(Surtidor surtidor, Cara cara) throws Exception {
@@ -490,8 +559,8 @@ public class MepsanController extends BaseControllerProtocols {
 
                 sutidao.setEstadoVenta(ventaDespacho2, Surtidor.SURTIDORES_ESTADO.VENTA_FINALIZADA);
 
-                NeoService.setLog(NeoService.ANSI_CYAN + "ENCORE: " + NeoService.ANSI_RESET + " Sistema  Acumulado Volumen: " + cara.getMagueraactual().getRegistroSistemaVolumen());
-                NeoService.setLog(NeoService.ANSI_CYAN + "ENCORE: " + NeoService.ANSI_RESET + " Surtidor Acumulado Volumen: " + cara.getMagueraactual().getRegistroSurtidorVolumen());
+                NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + " Sistema  Acumulado Volumen: " + cara.getMagueraactual().getRegistroSistemaVolumen());
+                NeoService.setLog(NeoService.ANSI_CYAN + "MEPSAN: " + NeoService.ANSI_RESET + " Surtidor Acumulado Volumen: " + cara.getMagueraactual().getRegistroSurtidorVolumen());
 
                 cara.setPublicEstadoId(NeoService.SURTIDORES_PUBLIC_ESTADO_ID_FINALIZADA_PEOT);
                 cara.setPublicEstadoDescripcion(NeoService.SURTIDORES_PUBLIC_ESTADO_DS_FINALIZADA_PEOT);
@@ -520,13 +589,13 @@ public class MepsanController extends BaseControllerProtocols {
         recuperarVentaCara(surtidor, cara);
 
         try {
-            procesarEstadoDespachoSurtidor(surtidor, cara);
+            procesarEstadoDespachoSurtidor(surtidor, cara, mangueraSurtidor);
         } catch (Exception ex) {
             Logger.getLogger(MepsanController.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
-    boolean procesarProcesoAutorizacion(Surtidor surtidor, Cara cara, int estado, int mangueraSurtidor) {
+    boolean procesarProcesoAutorizacion(Surtidor surtidor, Cara cara, int estado, int mangueraSurtidor) throws Exception {
         int grado = validarGrado(cara, mangueraSurtidor);
         CatalogoBean bloqueo = sutidao.getBloqueo(surtidor.getId(), cara.getNumero(), grado);
         grupoJornada = sutidao.getGrupoJornada();
@@ -538,14 +607,31 @@ public class MepsanController extends BaseControllerProtocols {
                 Totalizador iniciales = totalizadoresSurtidor(cara, grado, 3);
                 if (iniciales != null) {
                     Autorizacion autorizacion = sutidao.getAutorizacion(cara.getNumero(), grado);
-                    try {
-                        protocolo.autorizar(surtidor, cara.getNumero(), TIEMPO_ENTRE_COMANDO);
-                    } catch (Exception e) {
-                        Logger.getLogger(MepsanController.class.getName()).log(Level.SEVERE, null, e);
+                    boolean autorizado = true;
+                    if (autorizacion != null) {
+                        NeoService.AUTORIZACION_REQUIERE_VEHICULO = sdao.getCaraRequierePlaca(cara.getMagueraactual().getId());
+                        if (NeoService.AUTORIZACION_REQUIERE_VEHICULO && autorizacion.getPlacaVehiculo() == null) {
+                            autorizado = false;
+                            NeoService.setLog(NeoService.ANSI_RED+"MANGUERA " + cara.getMagueraactual().getId() + " REQUIERE PLACA"+NeoService.ANSI_RESET);
+                        }
+                        sdao.actualizaAutorizacion(autorizacion.getId());
+                        procesarAutorizacionPredeterminacion(surtidor, cara, mangueraSurtidor, autorizacion);
                     }
-                    sdao.borrarPredeterminada(cara.getNumero());
+                    if (autorizado) {
+                        try {
+                            protocolo.autorizar(surtidor, cara.getNumero(), TIEMPO_ENTRE_COMANDO);
+                        } catch (Exception e) {
+                            Logger.getLogger(MepsanController.class.getName()).log(Level.SEVERE, null, e);
+                        }
+                        crearVenta0(cara, iniciales, promotorAutoriza, autorizacion, grado);
+                        sdao.borrarPredeterminada(cara.getNumero());
+                    }
+
+                    NeoService.PERSONA_AUTORIZA_ID.set(0);
+                    NeoService.REGISTRO_PERSONA.put(cara.getNumero(), 0L);
+                    NeoService.AUTORIZACION.remove(cara.getNumero());
+
                     pauseCore(TIEMPO_ENTRE_COMANDO);
-                    crearVenta0(cara, iniciales, promotorAutoriza, autorizacion, grado);
                     return true;
                 } else {
                     NeoService.setLog(NeoService.ANSI_RED + "->>SIN TOTALIZADORES INICIALES ->" + NeoService.ANSI_RESET);
@@ -613,12 +699,15 @@ public class MepsanController extends BaseControllerProtocols {
         ventaAutorizada.setFechaInicio(new Date());
         ventaAutorizada.setFechaFin(new Date());
         ventaAutorizada.setProductoId(cara.getMagueraactual().getProductoId());
+        ventaAutorizada.setClienteId(NeoService.CLIENTES_VARIOS_ID);
+
         ventaAutorizada.setSurtidorTipoId(Venta.ORIGEN_TIPO.SURTIDOR);
         NeoService.setLog(NeoService.ANSI_CYAN + " ** MEPSAN: " + NeoService.ANSI_RESET + "VOLUMEN DE LA MANGUERA " + cara.getMagueraactual().getRegistroSurtidorVolumen());
 
         if (iniciales != null) {
             ventaAutorizada.setAcumuladoImporteInicial(iniciales.getAcumuladoVenta());
             ventaAutorizada.setAcumuladoVolumenInicial(iniciales.getAcumuladoVolumen());
+            ventaAutorizada.setActualPrecio(iniciales.getPrecio());
         } else {
             ventaAutorizada.setAcumuladoImporteInicial(cara.getMagueraactual().getRegistroSurtidorVentas());
             ventaAutorizada.setAcumuladoVolumenInicial(cara.getMagueraactual().getRegistroSurtidorVolumen());
@@ -628,23 +717,20 @@ public class MepsanController extends BaseControllerProtocols {
         ventaAutorizada.setSurtidorId(surtidor.getId());
         ventaAutorizada.setCara(cara.getNumero());
         ventaAutorizada.setGrado(cara.getMagueraactual().getGrado());
-        ventaAutorizada.setActualPrecio(iniciales.getPrecio());
         ventaAutorizada.setOperadorId(personaAutoriza);
         ventaAutorizada.setJornadaId(grupoJornada);
-
         if (autorizacion != null) {
             ventaAutorizada.setAutorizacionToken(autorizacion);
             ventaAutorizada.setClienteId(autorizacion.getIdentificadorCLiente());
+            ventaAutorizada.setPlaca(autorizacion.getPlacaVehiculo());
         } else {
             NeoService.setLog(NeoService.ANSI_CYAN + "-> MEPSAN: " + NeoService.ANSI_RESET + "NO EN ENCONTRO UNA PREAUTORIZACIÓN EN EL SISTEMA EN LA CARA " + cara.getNumero() + " GRADO " + grado);
         }
 
         long id = sutidao.setEstadoVenta(ventaAutorizada, Surtidor.SURTIDORES_ESTADO.AUTORIZACION);
         ventaAutorizada.setId(id);
-
         cara.getMagueraactual().setVenta(ventaAutorizada);
         NeoService.setLog(NeoService.ANSI_CYAN + "->> MEPSAN: " + NeoService.ANSI_RESET + "AUTORIZACION COMPLETA CARA " + cara.getNumero() + " ###################################################### ");
-
     }
 
     Totalizador totalizadoresSurtidor(Cara cara, int grado, int intentos) {

@@ -40,6 +40,7 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -462,10 +463,10 @@ public class SurtidorDao {
                 String sql = "INSERT INTO ventas_curso(\n"
                         + "            id, tipo_origen_id, origen_id, operario_id, cliente_id, surtidor, cara, \n"
                         + "            manguera, grado, productos_id, cantidad, importe, total, fecha_inicio, \n"
-                        + "            fecha_fin, acumulado_cantidad, acumulado_importe, sincronizado, jornada_id, placa, token_process_id)\n"
+                        + "            fecha_fin, acumulado_cantidad, acumulado_importe, sincronizado, jornada_id, placa, token_process_id,atributos)\n"
                         + "    VALUES (nextval('ventas_curso_id'), ?, ?, ?, ?, ?, ?, \n"
                         + "            ?, ?, ?, ?, ?, ?, ?, \n"
-                        + "            ?, ?, ?, ?, ?, ?, ?) RETURNING currval('ventas_curso_id') ";
+                        + "            ?, ?, ?, ?, ?, ?, ?,?::json) RETURNING currval('ventas_curso_id') ";
 
                 PreparedStatement ps = NeoService.obtenerConexion().prepareCall(sql);
                 ps.setLong(1, venta.getSurtidorTipoId().getNumVal());
@@ -492,6 +493,12 @@ public class SurtidorDao {
                 } else {
                     ps.setNull(20, Types.NULL);
                 }
+                String atributos = getAtributosVentaEnCurso(venta.getCara(), venta.getManguera(), venta.getGrado());
+                if (atributos != null && atributos.length() > 0 && !atributos.isEmpty()) {
+                    ps.setString(21, atributos);
+                } else {
+                    ps.setNull(21, Types.NULL);
+                }
                 ResultSet re = ps.executeQuery();
                 while (re.next()) {
                     venta.setId(re.getLong(1));
@@ -517,10 +524,10 @@ public class SurtidorDao {
                     String sql = "INSERT INTO ventas_curso(\n"
                             + "            id, tipo_origen_id, origen_id, operario_id, cliente_id, surtidor, cara, \n"
                             + "            manguera, grado, productos_id, cantidad, importe, total, fecha_inicio, \n"
-                            + "            fecha_fin, acumulado_cantidad, acumulado_importe, sincronizado, jornada_id, placa, token_process_id)\n"
+                            + "            fecha_fin, acumulado_cantidad, acumulado_importe, sincronizado, jornada_id, placa, token_process_id,atributos)\n"
                             + "    VALUES (nextval('ventas_curso_id'), ?, ?, ?, ?, ?, ?, \n"
                             + "            ?, ?, ?, ?, ?, ?, now(), \n"
-                            + "            now(), ?, ?, ?, ?, ?, ?) RETURNING currval('ventas_curso_id') ";
+                            + "            now(), ?, ?, ?, ?, ?, ?,?::json) RETURNING currval('ventas_curso_id') ";
 
                     PreparedStatement ps = NeoService.obtenerConexion().prepareCall(sql);
                     ps.setLong(1, venta.getSurtidorTipoId().getNumVal());
@@ -544,6 +551,12 @@ public class SurtidorDao {
                         ps.setLong(18, venta.getAutorizacionToken().getId());
                     } else {
                         ps.setNull(18, Types.NULL);
+                    }
+                    String atributos = getAtributosVentaEnCurso(venta.getCara(), venta.getManguera(), venta.getGrado());
+                    if (atributos != null && atributos.length() > 0 && !atributos.isEmpty()) {
+                        ps.setString(19, atributos);
+                    } else {
+                        ps.setNull(19, Types.NULL);
                     }
 
                     ResultSet re = ps.executeQuery();
@@ -612,7 +625,48 @@ public class SurtidorDao {
                     }
                     if (!existeVenta) {
                         NeoService.millisecondsPause(200);
+                        try {
+                            if (venta.getAutorizacionToken() != null) {
+                                System.out.println("EXISTE UNA AUTORIZACIÓN CON ESTA VENTA " + venta.getAutorizacionToken().getId());
+                                int factorVolumen = 0;
+                                try {
+                                    factorVolumen = getFactorVolumen((int) venta.getSurtidorId());
+                                } catch (DAOException a) {
+                                }
+                                double cant = Utils.calculeCantidadDouble(venta.getActualVolumenReal(), factorVolumen);
 
+                                sql = "SELECT placa_vehiculo, vehiculo_odometro, trama FROM transacciones WHERE ID = ?";
+                                ps = NeoService.db.getConn().prepareCall(sql);
+                                ps.setLong(1, venta.getAutorizacionToken().getId());
+                                re = ps.executeQuery();
+                                while (re.next()) {
+                                    venta.setPlaca(re.getString("placa_vehiculo"));
+                                    JsonObject atrib = new JsonObject();
+                                    atrib.addProperty("vehiculo_placa", re.getString("placa_vehiculo"));
+                                    atrib.addProperty("vehiculo_odometro", re.getString("vehiculo_odometro"));
+                                    venta.setAtributos(atrib);
+                                    JsonObject json = Main.GSON.fromJson(re.getString("trama"), JsonObject.class);
+                                    if (json.get("recaudar") != null) {
+
+                                        double recaudo = json.get("recaudar").getAsDouble();
+                                        double recaudado = recaudo * cant;
+                                        json.addProperty("recaudado", recaudado);
+
+                                        sql = "UPDATE transacciones SET TRAMA=?::json WHERE id=?";
+                                        ps = NeoService.db.getConn().prepareCall(sql);
+                                        ps.setString(1, json.toString());
+                                        ps.setLong(2, venta.getAutorizacionToken().getId());
+
+                                        System.out.println("ACTUALIZANDO AUTORIZACIÓN DE RECAUDO");
+                                        System.out.println(ps.toString());
+                                        ps.executeUpdate();
+
+                                    }
+                                }
+                            }
+
+                        } catch (Exception t) {
+                        }
                         NeoService.setLog("FUNCION 5A EN ENVIA REGISTRO DE LA VENTA A BD");
                         sql = "INSERT INTO ventas "
                                 + "("
@@ -650,7 +704,11 @@ public class SurtidorDao {
                         if (atributos != null && atributos.length() > 0 && !atributos.isEmpty()) {
                             ps.setString(14, atributos);
                         } else {
-                            ps.setNull(14, Types.NULL);
+                            if (venta.getAtributos() != null) {
+                                ps.setString(14, venta.getAtributos().toString());
+                            } else {
+                                ps.setNull(14, Types.NULL);
+                            }
                         }
                         NeoService.setLog(NeoService.ANSI_YELLOW + ps.toString() + NeoService.ANSI_RESET);
                         ps.executeUpdate();
@@ -2658,29 +2716,40 @@ public class SurtidorDao {
         }
     }
 
-    public Autorizacion getAutorizacion(int numero, int grado) {
+    public Autorizacion getAutorizacion(int cara, int grado) {
         Autorizacion aut = null;
         try {
-            String sql = "SELECT ID, CODIGO, proveedores_id, promotor_id  FROM transacciones WHERE CARA=? AND GRADO=? AND USADO IS NULL";
+            String sql = "SELECT ID, CODIGO, TRAMA, placa_vehiculo, vehiculo_odometro, proveedores_id, promotor_id ,cantidad_maxima ,monto_maximo FROM transacciones WHERE CARA=? AND GRADO=? AND USADO IS NULL";
             PreparedStatement ps = NeoService.obtenerConexion().prepareCall(sql);
-            ps.setInt(1, numero);
+            ps.setInt(1, cara);
             ps.setInt(2, grado);
-            NeoService.setLog(NeoService.ANSI_YELLOW + ps.toString() + NeoService.ANSI_RESET);
             ResultSet re = ps.executeQuery();
             while (re.next()) {
                 aut = new Autorizacion();
                 aut.setId(re.getLong("id"));
+                NeoService.setLog("AUTORIZACION EN LA BD NUMERO -> " + re.getLong("id"));
                 aut.setToken(re.getString("codigo"));
-                aut.setProveedorId(re.getLong("proveedores_id"));
+                aut.setPlacaVehiculo(re.getString("placa_vehiculo"));
+                aut.setMontoMaximo(re.getLong("monto_maximo"));
+                aut.setCantidadMaxima(re.getLong("cantidad_maxima"));
+                aut.setOdometro(re.getString("vehiculo_odometro"));
                 aut.setPromotorId(re.getLong("promotor_id"));
+                if (re.getString("trama") != null) {
+                    JsonObject json = Main.GSON.fromJson(re.getString("trama"), JsonObject.class);
+
+                    if (json.get("identificadorCliente") != null && !json.get("identificadorCliente").isJsonNull()) {
+                        aut.setIdentificadorCLiente(json.get("identificadorCliente").getAsInt());
+                    }
+
+                    if (json.get("numeroDocumento") != null && !json.get("numeroDocumento").isJsonNull()) {
+                        aut.setIdentificadorCLiente(json.get("numeroDocumento").getAsInt());
+                    }
+                } else {
+                    aut.setIdentificadorCLiente(NeoService.CLIENTES_VARIOS_ID);
+                }
             }
-        } catch (PSQLException ex) {
-            Logger.getLogger(SurtidorDao.class
-                    .getName()).log(Level.SEVERE, null, ex);
+
         } catch (SQLException ex) {
-            Logger.getLogger(SurtidorDao.class
-                    .getName()).log(Level.SEVERE, null, ex);
-        } catch (Exception ex) {
             Logger.getLogger(SurtidorDao.class
                     .getName()).log(Level.SEVERE, null, ex);
         }
@@ -4310,5 +4379,22 @@ public class SurtidorDao {
             NeoService.setLog("[ERROR (getParametroBoolean) Exception]: " + s.getMessage());
         }
         return false;
+    }
+
+    public boolean getCaraRequierePlaca(int manguera) {
+        boolean requiere = false;
+        try {
+            String sql = "SELECT valor FROM PARAMETROS WHERE codigo='manguera_requiere_placa'";
+            PreparedStatement ps = NeoService.obtenerConexion().prepareCall(sql);
+            ResultSet re = ps.executeQuery();
+            while (re.next()) {
+                String[] values = re.getString("valor").split(",");
+                requiere = Arrays.stream(values).anyMatch(String.valueOf(manguera)::equals);
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(SurtidorDao.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return requiere;
+
     }
 }

@@ -340,7 +340,7 @@ public class MepsanController extends BaseControllerProtocols {
     }
 
     void procesarEstadoDescolgado(Surtidor surtidor, Cara cara, int estado, int mangueraSurtidor) throws Exception {
-        NeoService.setLog("ESTADO MANGUERA #".concat(cara.getMagueraactual().getId() + "").concat(" DESCOLGADO"));
+        NeoService.setLog("-> ESTADO MANGUERA #".concat(cara.getMagueraactual().getId() + "").concat(" DESCOLGADO"));
         if (!sutidao.getVentaCurso(surtidor, cara)) {
             boolean existeSaltoLectura = false;
             for (Map.Entry<Integer, Manguera> entry : cara.getMangueras().entrySet()) {
@@ -350,14 +350,9 @@ public class MepsanController extends BaseControllerProtocols {
                     break;
                 }
             }
-
-            cara.setPublicEstadoId(NeoService.SURTIDORES_PUBLIC_ESTADO_ID_AUTORIZACION);
-            cara.setPublicEstadoDescripcion(NeoService.SURTIDORES_PUBLIC_ESTADO_DS_AUTORIZACION);
-            cara.setEstado(ESTADO_MANGUERA_DESCOLGADO);
-            sutidao.guardarEstado(surtidor, cara, validarGrado(cara, mangueraSurtidor));
-
+            boolean autorizado = false;
             if (!existeSaltoLectura) {
-                boolean autorizado = procesarProcesoAutorizacion(surtidor, cara, estado, mangueraSurtidor);
+                autorizado = procesarProcesoAutorizacion(surtidor, cara, estado, mangueraSurtidor);
                 if (!autorizado) {
                     NeoService.setLog("NO SE AUTORIZA LA CARA #".concat(cara.getNumero() + ""));
                 } else {
@@ -366,7 +361,9 @@ public class MepsanController extends BaseControllerProtocols {
                     cara.setEstado(SURTIDOR_ESTADO_AUTORIZADO);
                     sutidao.guardarEstado(surtidor, cara, validarGrado(cara, mangueraSurtidor));
                 }
-            } else {
+            }
+
+            if (!autorizado && cara.getEstado() != ESTADO_MANGUERA_DESCOLGADO) {
                 cara.setPublicEstadoId(NeoService.SURTIDORES_PUBLIC_ESTADO_ID_AUTORIZACION);
                 cara.setPublicEstadoDescripcion(NeoService.SURTIDORES_PUBLIC_ESTADO_DS_AUTORIZACION);
                 cara.setEstado(ESTADO_MANGUERA_DESCOLGADO);
@@ -377,10 +374,12 @@ public class MepsanController extends BaseControllerProtocols {
 
     void procesarEstadoAutorizado(Surtidor surtidor, Cara cara, int estado, int mangueraSurtidor) {
         NeoService.setLog("ESTADO MANGUERA #".concat(cara.getMagueraactual().getId() + "").concat(" AUTORIZADO"));
-        cara.setPublicEstadoId(NeoService.SURTIDORES_PUBLIC_ESTADO_ID_AUTORIZADO);
-        cara.setPublicEstadoDescripcion(NeoService.SURTIDORES_PUBLIC_ESTADO_DS_AUTORIZADO);
-        cara.setEstado(SURTIDOR_ESTADO_AUTORIZADO);
-        sutidao.guardarEstado(surtidor, cara, validarGrado(cara, mangueraSurtidor));
+        if (cara.getEstado() != SURTIDOR_ESTADO_AUTORIZADO) {
+            cara.setPublicEstadoId(NeoService.SURTIDORES_PUBLIC_ESTADO_ID_AUTORIZADO);
+            cara.setPublicEstadoDescripcion(NeoService.SURTIDORES_PUBLIC_ESTADO_DS_AUTORIZADO);
+            cara.setEstado(SURTIDOR_ESTADO_AUTORIZADO);
+            sutidao.guardarEstado(surtidor, cara, validarGrado(cara, mangueraSurtidor));
+        }
     }
 
     void validarInactividadRumbo(Cara cara) {

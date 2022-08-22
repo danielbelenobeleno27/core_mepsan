@@ -13,12 +13,10 @@ import com.core.app.protocols.Dispositivos;
 import com.core.app.protocols.MepsanController;
 import com.fazecast.jSerialComm.SerialPort;
 import com.neo.app.bean.Surtidor;
-import com.neo.app.bean.BaseControllerProtocols;
 import com.core.app.server.ServerComandoWS;
 import com.core.database.DAOException;
 import com.core.database.Postgrest;
 import com.core.database.impl.SurtidorDao;
-import com.neo.app.bean.Cara;
 import java.awt.AWTException;
 import java.awt.MenuItem;
 import java.awt.PopupMenu;
@@ -36,14 +34,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.ImageIcon;
 
-/**
- * @author ASUS-PC
- */
 public class NeoService {
 
     public static final String APLICATION_FULL_NAME = "Lazo Express Core";
     public static final String APLICATION_NAME = "lazo_express_core";
-    public static final int VERSION_CODE = 7;
+    public static final int VERSION_CODE = 8;
     public static boolean SURTIDOR_ERROR = false;
     public static final String VERSION_NAME = "Beta 3 C" + VERSION_CODE;
 

@@ -377,7 +377,7 @@ public class MepsanProtocol extends BaseProtocols {
         byte data0 = (byte) Integer.parseInt(arrayDinero[0] + "" + arrayDinero[1], 16);
         byte data1 = (byte) Integer.parseInt(arrayDinero[2] + "" + arrayDinero[3], 16);
         byte data2 = (byte) Integer.parseInt(arrayDinero[4] + "" + arrayDinero[5], 16);
-        byte data3 = (byte) Integer.parseInt(arrayDinero[5] + "" + arrayDinero[6], 16);
+        byte data3 = (byte) Integer.parseInt(arrayDinero[6] + "" + arrayDinero[7], 16);
 
         txTrama[4] = data0;
         txTrama[5] = data1;

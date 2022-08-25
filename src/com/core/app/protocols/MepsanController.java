@@ -675,13 +675,18 @@ public class MepsanController extends BaseControllerProtocols {
 
             ArrayList<Byte> results = protocolo.estadoManguera(surtidor, cara, TIEMPO_ENTRE_COMANDO);
             Utils.printArray("ESTADO PARA ACTUALIZAR PRECIO", results);
+            
+            Manguera mang;
             for (Map.Entry<Integer, Manguera> entry : surtidor.getCaras().get(cara).getMangueras().entrySet()) {
                 Manguera manguera = entry.getValue();
                 if (manguera.getGrado() == grado) {
-                    SurtidorDao dao = new SurtidorDao();
-                    dao.actualizarPrecioProucto(manguera.getProductoId(), lista, precioOriginal, true);
+                    mang = manguera;
+                    sdao.registrarAuditoriaCambioPrecio(surtidor.getId(), cara, mang.getId(), sdao.getProductoConFamiliaById(mang.getProductoId()).getDescripcion(), mang.getProductoPrecio(), precioOriginal);
+                    sdao.actualizarPrecioProucto(manguera.getProductoId(), lista, precioOriginal, true);
+                    mang.setProductoPrecio(precioOriginal);
                 }
             }
+            
             if (returnTotalizador) {
                 Cara ocara = new Cara();
                 ocara.setNumero(cara);
@@ -692,7 +697,7 @@ public class MepsanController extends BaseControllerProtocols {
                     }
                 }
             }
-        } catch (Exception ex) {
+        } catch (Exception | DAOException ex) {
             Logger.getLogger(MepsanController.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             TIENE_PETICION.set(false);

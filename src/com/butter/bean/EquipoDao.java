@@ -590,6 +590,7 @@ public class EquipoDao {
             agregarColumnaConexion();
             agregarColumnaFactorPredeterminacion();
             agregarColumnaAtributos();
+            validarAuditoriaCambioPrecio();
         } catch (DAOException e) {
             NeoService.setLog(e.getMessage());
             Logger.getLogger(EquipoDao.class.getName()).log(Level.SEVERE, null, e);
@@ -749,5 +750,31 @@ public class EquipoDao {
             NeoService.setLog("[ERROR (obtenerSiguienteId) Exception]: " + s.getMessage());
         }
         return id;
+    }
+
+    private void validarAuditoriaCambioPrecio() {
+        NeoService.setLog("VALIDANDO AUDITORIA CAMBIO PRECIO");
+        try {
+            String sql = "CREATE TABLE IF NOT EXISTS public.auditoria_cambio_precio (\n"
+                    + "id serial,"
+                    + "surtidor int not null,"
+                    + "cara int not null,"
+                    + "manguera int not null,"
+                    + "fecha_cambio timestamp not null,"
+                    + "producto varchar(255) not null,"
+                    + "precio_antiguo numeric(12, 3) not null,"
+                    + "precio_nuevo numeric(12, 3) not null,"
+                    + "origen varchar(10) null"
+                    + ");";
+            PreparedStatement ps = NeoService.obtenerConexion().prepareStatement(sql);
+            NeoService.setLog(ps.toString());
+            int result = ps.executeUpdate();
+            if (result > 0) {
+                NeoService.setLog(NeoService.ANSI_YELLOW + "TABLA AUDITORIA CAMBIO PRECIO CREADA" + NeoService.ANSI_RESET);
+            }
+        } catch (SQLException e) {
+            NeoService.setLog(e.getMessage());
+            Logger.getLogger(EquipoDao.class.getName()).log(Level.SEVERE, null, e);
+        }
     }
 }

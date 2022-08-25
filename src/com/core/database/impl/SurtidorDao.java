@@ -2744,11 +2744,11 @@ public class SurtidorDao {
                     if (json.get("numeroDocumento") != null && !json.get("numeroDocumento").isJsonNull()) {
                         aut.setIdentificadorCLiente(json.get("numeroDocumento").getAsInt());
                     }
-                    
+
                     if (json.get("tipoVenta") != null && !json.get("tipoVenta").isJsonNull()) {
                         aut.setTipoVenta(json.get("tipoVenta").getAsInt());
                     }
-                    
+
                 } else {
                     aut.setIdentificadorCLiente(NeoService.CLIENTES_VARIOS_ID);
                 }
@@ -4401,5 +4401,25 @@ public class SurtidorDao {
         }
         return requiere;
 
+    }
+
+    public void registrarAuditoriaCambioPrecio(int surtidor, int cara, int manguera, String producto, long precio, long precioOriginal) {
+        try {
+            String sql = "INSERT INTO public.auditoria_cambio_precio\n"
+                    + "(surtidor, cara, manguera, fecha_cambio, producto, precio_antiguo, precio_nuevo)\n"
+                    + "VALUES(?, ?, ?, now(), ?, ?, ?);";
+            PreparedStatement ps = NeoService.obtenerConexion().prepareCall(sql);
+            ps.setInt(1, surtidor);
+            ps.setInt(2, cara);
+            ps.setInt(3, manguera);
+            ps.setString(4, producto);
+            ps.setLong(5, precio);
+            ps.setLong(6, precioOriginal);
+            boolean inserted = ps.executeUpdate() != 0;
+            NeoService.setLog(inserted ? "SE HA REGISTRADO UNA AUDITORIA DE CAMBIO DE PRECIO" : "FALLO AL REGISTRAR AUDITORIA");
+        } catch (SQLException ex) {
+            NeoService.setLog(ex.getMessage());
+            Logger.getLogger(SurtidorDao.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }

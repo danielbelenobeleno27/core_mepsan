@@ -2748,6 +2748,7 @@ public class SurtidorDao {
                     if (json.get("tipoVenta") != null && !json.get("tipoVenta").isJsonNull()) {
                         aut.setTipoVenta(json.get("tipoVenta").getAsInt());
                     }
+                    
                 } else {
                     aut.setIdentificadorCLiente(NeoService.CLIENTES_VARIOS_ID);
                 }

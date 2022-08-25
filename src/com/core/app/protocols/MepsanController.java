@@ -47,6 +47,8 @@ public class MepsanController extends BaseControllerProtocols {
     private static final TreeMap<Byte, String> ESTADOS_SURTIDOR = new TreeMap<>();
     private static final TreeMap<Byte, String> ESTADOS_MANGUERA = new TreeMap<>();
 
+    private static final int TIPO_CALIBRACION = 2;
+    
     //FINALIZA VALORES DE LOS ESTADOS
     public static final int CONSTANTE_FIND_MANGUERA = 0x0F;
     public static final int CONSTANTE_FIND_REPUESTA = 0xF0;
@@ -607,16 +609,19 @@ public class MepsanController extends BaseControllerProtocols {
                 if (iniciales != null) {
                     Autorizacion autorizacion = sutidao.getAutorizacion(cara.getNumero(), grado);
                     boolean autorizado = true;
-
-                    NeoService.AUTORIZACION_REQUIERE_VEHICULO = sdao.getCaraRequierePlaca(cara.getMagueraactual().getId());
-                    if (NeoService.AUTORIZACION_REQUIERE_VEHICULO) {
-                        autorizado = false;
-                        if (autorizacion != null && autorizacion.getPlacaVehiculo() != null) {
-                            autorizado = true;
-                        } else {
-                            NeoService.setLog(NeoService.ANSI_RED + "MANGUERA " + cara.getMagueraactual().getId() + " REQUIERE PLACA" + NeoService.ANSI_RESET);
+                    
+                    if (autorizacion != null && autorizacion.getTipoVenta() != TIPO_CALIBRACION) {
+                        NeoService.AUTORIZACION_REQUIERE_VEHICULO = sdao.getCaraRequierePlaca(cara.getMagueraactual().getId());
+                        if (NeoService.AUTORIZACION_REQUIERE_VEHICULO) {
+                            autorizado = false;
+                            if (autorizacion.getPlacaVehiculo() != null) {
+                                autorizado = true;
+                            } else {
+                                NeoService.setLog(NeoService.ANSI_RED + "MANGUERA " + cara.getMagueraactual().getId() + " REQUIERE PLACA" + NeoService.ANSI_RESET);
+                            }
                         }
                     }
+                    
                     if (autorizacion != null) {
                         sdao.actualizaAutorizacion(autorizacion.getId());
                         procesarAutorizacionPredeterminacion(surtidor, cara, mangueraSurtidor, autorizacion);

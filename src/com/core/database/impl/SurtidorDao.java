@@ -2744,6 +2744,11 @@ public class SurtidorDao {
                     if (json.get("numeroDocumento") != null && !json.get("numeroDocumento").isJsonNull()) {
                         aut.setIdentificadorCLiente(json.get("numeroDocumento").getAsInt());
                     }
+                    
+                    if (json.get("tipoVenta") != null && !json.get("tipoVenta").isJsonNull()) {
+                        aut.setTipoVenta(json.get("tipoVenta").getAsInt());
+                    }
+                    
                 } else {
                     aut.setIdentificadorCLiente(NeoService.CLIENTES_VARIOS_ID);
                 }

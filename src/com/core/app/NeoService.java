@@ -271,15 +271,6 @@ public class NeoService {
         NeoService.LECTOR_RFID_COM = dao.getParametroString("lector_rfid");
         NeoService.setLog("[INFO (main)] LECTOR_RFID_COM -> " + NeoService.LECTOR_RFID_COM);
 
-        NeoService.IP_IMPRESORA = dao.getParametroString("impresora");
-        NeoService.setLog("[INFO (main)] IP_IMPRESORA -> " + NeoService.IP_IMPRESORA);
-
-        NeoService.TIPO_IMPRESORA = dao.getParametroInt("tipo_impresora");
-        NeoService.setLog("[INFO (main)] TIPO_IMPRESORA -> " + NeoService.TIPO_IMPRESORA + " (1:TCP, 2:SISTEMA)");
-
-        NeoService.METODO_AUTORIZACION_TAG = dao.getParametroInt("tipo_autorizacion");
-        NeoService.setLog("[INFO (main)] METODO_AUTORIZACION_TAG -> " + NeoService.METODO_AUTORIZACION_TAG + " (1:SIN_TAG, 2:TAG_GLOBAL, 3:TAG_CARA)");
-
         NeoService.LECTOR_RFID2 = dao.getParametroString("rfid2_puerto");
         NeoService.setLog("[INFO (main)] LECTOR_RFID2 -> " + NeoService.LECTOR_RFID2 + " lector RFID Version 2");
 

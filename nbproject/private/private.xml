@@ -4,9 +4,8 @@
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
             <file>file:/C:/Users/danie/Documents/CoreMepsan/src/com/core/database/impl/SurtidorDao.java</file>
-            <file>file:/C:/Users/danie/Documents/CoreMepsan/src/com/core/app/protocols/MepsanController.java</file>
-            <file>file:/C:/Users/danie/Documents/CoreMepsan/src/com/core/app/protocols/MepsanProtocol.java</file>
-            <file>file:/C:/Users/danie/Documents/CoreMepsan/src/com/core/commons/cliente/ClientTcp.java</file>
+            <file>file:/C:/Users/danie/Documents/CoreMepsan/src/com/core/app/NeoService.java</file>
+            <file>file:/C:/Users/danie/Documents/CoreMepsan/src/com/core/print/services/PrinterService.java</file>
         </group>
     </open-files>
 </project-private>

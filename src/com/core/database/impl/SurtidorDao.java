@@ -4422,4 +4422,21 @@ public class SurtidorDao {
             Logger.getLogger(SurtidorDao.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+
+    public String getParametroString(String codigo) {
+        String valor = null;
+        try {
+
+            String sql = "SELECT valor FROM PARAMETROS WHERE codigo=?";
+            PreparedStatement ps = NeoService.obtenerConexion().prepareStatement(sql);
+            ps.setString(1, codigo);
+            ResultSet re = ps.executeQuery();
+            while (re.next()) {
+                valor = re.getString("valor");
+            }
+        } catch (SQLException e) {
+            NeoService.setLog("[ERROR (getParametroString) DAOException]: " + e.getMessage());
+        }
+        return valor;
+    }
 }

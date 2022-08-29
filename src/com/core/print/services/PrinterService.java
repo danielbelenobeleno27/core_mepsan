@@ -78,9 +78,14 @@ public class PrinterService {
     public static final byte[] TXT_ALIGN_CT = {0x1b, 0x61, 0x01}; // Centering
     public static final byte[] TXT_ALIGN_RT = {0x1b, 0x61, 0x02}; // Right justification
     public static final byte[] LEFT_MARGIN = {0x1b, 0x6c, 0x08}; // Left Margin
+    
+    private final SurtidorDao sdao = new SurtidorDao();
 
     protected void printText(String test) throws UnknownHostException, IOException, PrintException {
-        //NeoService.setLog(test);
+        NeoService.IP_IMPRESORA = sdao.getParametroString("impresora");
+        NeoService.setLog("[INFO (main)] IP_IMPRESORA -> " + NeoService.IP_IMPRESORA);
+        NeoService.PORT_IMPRESORA = sdao.getParametroInt("impresora_puerto");
+        NeoService.setLog("[INFO (main)] PORT_IMPRESORA -> " + NeoService.PORT_IMPRESORA);
         try {
 
             if (NeoService.IP_IMPRESORA.toLowerCase().contains("usb:")) {
@@ -161,7 +166,10 @@ public class PrinterService {
     }
 
     protected void printBytes(ArrayList<byte[]> array) throws UnknownHostException, IOException, PrintException {
-        //NeoService.setLog(test);
+        NeoService.IP_IMPRESORA = sdao.getParametroString("impresora");
+        NeoService.setLog("[INFO (main)] IP_IMPRESORA -> " + NeoService.IP_IMPRESORA);
+        NeoService.PORT_IMPRESORA = sdao.getParametroInt("impresora_puerto");
+        NeoService.setLog("[INFO (main)] PORT_IMPRESORA -> " + NeoService.PORT_IMPRESORA);
 
         if (NeoService.IP_IMPRESORA.toLowerCase().contains("usb:")) {
 
@@ -293,7 +301,10 @@ public class PrinterService {
     }
 
     protected void printTextConLogo(String test) throws UnknownHostException, IOException, PrintException {
-        //NeoService.setLog(test);
+        NeoService.IP_IMPRESORA = sdao.getParametroString("impresora");
+        NeoService.setLog("[INFO (main)] IP_IMPRESORA -> " + NeoService.IP_IMPRESORA);
+        NeoService.PORT_IMPRESORA = sdao.getParametroInt("impresora_puerto");
+        NeoService.setLog("[INFO (main)] PORT_IMPRESORA -> " + NeoService.PORT_IMPRESORA);
 
         try {
             SurtidorDao dao = new SurtidorDao();
@@ -334,5 +345,4 @@ public class PrinterService {
             NeoService.setLog("Error al conectar a la impresora " + NeoService.IP_IMPRESORA + ":" + NeoService.PORT_IMPRESORA);
         }
     }
-
 }
